@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+type Question struct {
+	Question string
+	Username string
+	Role     string
+}
+
 func readHtmlFromFile(fileName string) (string, error) {
 
 	bs, err := os.ReadFile(fileName)
@@ -40,7 +46,12 @@ func parse(text string) (data []string) {
 
 			t := tkn.Token()
 
-			readAttrs(tkn, t)
+			readAttrs(tkn, t, "question-view")
+
+			if tokenHasRequiredCssClass(t, "question-view") {
+				qw := readQuestionViewBlock(tkn, t)
+				fmt.Printf("tokenHasRequiredCssClass: %s\n", qw)
+			}
 
 			isLi = t.Data == "li"
 
@@ -70,7 +81,7 @@ func main() {
 	fmt.Println(data)
 }
 
-func readAttrs(tkn *html.Tokenizer, t html.Token) {
+func readAttrs(tkn *html.Tokenizer, t html.Token, value string) {
 	for _, attr := range t.Attr {
 
 		if attr.Key == "class" {
@@ -79,7 +90,7 @@ func readAttrs(tkn *html.Tokenizer, t html.Token) {
 			classes := strings.Split(attr.Val, " ")
 			for _, class := range classes {
 				// fmt.Printf("Class %d is: %s\n", idx, class)
-				if class == "username" {
+				if class == value {
 					fmt.Printf("Username: %s\n", t.Data)
 					tkn.Next()
 				}
@@ -87,4 +98,30 @@ func readAttrs(tkn *html.Tokenizer, t html.Token) {
 		}
 
 	}
+}
+
+func readQuestionViewBlock(tkn *html.Tokenizer, t html.Token) Question {
+
+	q := Question{
+		"Блок вопроса присутствует",
+		"username",
+		"Пользователь",
+	}
+	return q
+}
+
+// Перебирает аттрибуты токена в цикле и возвращает bool
+// если в html token найден переданный css class
+func tokenHasRequiredCssClass(t html.Token, rcc string) bool {
+	for _, attr := range t.Attr {
+		if attr.Key == "class" {
+			classes := strings.Split(attr.Val, " ")
+			for _, class := range classes {
+				if class == rcc {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

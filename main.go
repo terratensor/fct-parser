@@ -1,5 +1,6 @@
 package main
 
+import "C"
 import (
 	"bytes"
 	"fmt"
@@ -12,9 +13,8 @@ import (
 )
 
 type Topic struct {
-	Question  Comment
-	Secondary Comment
-	// LinkedQuestion []Comment
+	Question       Comment
+	LinkedQuestion []Comment
 	// Comments       []Comment
 }
 
@@ -36,10 +36,13 @@ func main() {
 		if err != nil {
 			log.Fatalf("parse: %v\n", err)
 		}
-		topic, err := parseTopic(doc)
-		if err != nil {
-			log.Fatalf("parse: %v\n", err)
-		}
+
+		topic := Topic{}
+
+		topic.parseTopic(doc)
+		// if err != nil {
+		// 	log.Fatalf("parse: %v\n", err)
+		// }
 
 		// w := csv.NewWriter(file)
 		//
@@ -56,7 +59,7 @@ func main() {
 		// 	log.Fatal(err)
 		// }
 
-		fmt.Printf("Topic: %v", *topic)
+		fmt.Printf("Topic: %v", topic)
 	}
 }
 
@@ -88,41 +91,62 @@ func checkError(message string, err error) {
 	}
 }
 
-func parseTopic(doc *html.Node) (*Topic, error) {
-
-	topic := &Topic{}
-
-	comment := Comment{}
-	comment.parseQuestionView(doc)
-
-	topic.Question = comment
-	topic.Secondary = comment
-
-	return topic, nil
+func (topic *Topic) parseTopic(doc *html.Node) {
+	parseQuestionView(doc, topic)
 }
 
-func (comment *Comment) parseQuestionView(n *html.Node) {
+func parseQuestionView(n *html.Node, topic *Topic) {
 
-	if n.Type == html.ElementNode && nodeHasRequiredCssClass("question-view", n) {
-		parseComment(n, comment)
+	exit := false
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("question-view", n) {
+			topic.Question = parseComment(n)
+		}
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-questions", n) {
+			topic.LinkedQuestion = parseLinkedQuestions(n)
+			exit = true
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if exit == true {
+				break
+			}
+			f(c)
+		}
 	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		comment.parseQuestionView(c)
-	}
+	f(n)
 }
 
-func parseComment(n *html.Node, comment *Comment) {
+func parseLinkedQuestions(n *html.Node) []Comment {
+	var comments []Comment
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-question", n) {
+			comments = append(comments, parseComment(n))
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(n)
+	return comments
+}
+
+func parseComment(n *html.Node) Comment {
 
 	var nAnchor *html.Node
 	var bufInnerHtml bytes.Buffer
 
 	w := io.Writer(&bufInnerHtml)
 
+	comment := Comment{}
+
+	exit := false
+
 	var f func(*html.Node)
 	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && nodeHasRequiredCssClass("datetime", n) {
-			comment.Datetime = getInnerText(n)
-		}
 
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("username", n) {
 			comment.Username = getInnerText(n)
@@ -136,6 +160,10 @@ func parseComment(n *html.Node, comment *Comment) {
 			nAnchor = n
 		}
 
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("datetime", n) {
+			comment.Datetime = getInnerText(n)
+		}
+
 		if nAnchor != nil {
 			if n != nAnchor { // don't write the tag and its attributes
 				html.Render(w, n)
@@ -143,6 +171,9 @@ func parseComment(n *html.Node, comment *Comment) {
 		}
 
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if exit {
+				break
+			}
 			f(c)
 		}
 
@@ -151,16 +182,18 @@ func parseComment(n *html.Node, comment *Comment) {
 
 			bufInnerHtml.Reset()
 			nAnchor = nil
-
+			exit = true
 		}
 	}
 	f(n)
 
+	// fmt.Printf("parseComment: %v\n", comment)
 	// Заканчиваем парсинг комментария и выходим из функции если комментарий заполнен
-	if (comment != &Comment{}) {
-		return
-	}
-
+	// if (comment != Comment{}) {
+	// 	return comment
+	// }
+	// fmt.Printf("%v\n", comment)
+	return comment
 }
 
 func getInnerText(node *html.Node) string {

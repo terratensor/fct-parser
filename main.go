@@ -38,7 +38,7 @@ func main() {
 		}
 	}(file)
 
-	boolPtr := flag.Bool("json", true, "a bool")
+	boolPtr := flag.Bool("json", false, "a bool")
 	flag.Parse()
 
 	for _, url := range flag.Args() {

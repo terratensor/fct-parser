@@ -28,10 +28,17 @@ type Comment struct {
 	DataID   string `json:"data_id,omitempty"`
 }
 
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
+}
+
 func main() {
 
 	var filename string
 	boolPtr := flag.Bool("json", false, "a bool")
+	indent := flag.Bool("indent", false, "a bool")
 	flag.StringVar(&filename, "file", "topic.csv", "write to file name")
 	flag.Parse()
 
@@ -45,14 +52,11 @@ func main() {
 		topic.parseTopic(doc)
 
 		if *boolPtr {
-			b, err := json.Marshal(topic)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("%v\n\r", string(b))
+			writeJsonFile(topic, "./"+filename, *indent)
+			log.Printf("The file ./%v was successeful writing\n", filename)
 		} else {
 			writeCSVFile(topic, "./"+filename)
-			fmt.Printf("The file ./%v was successeful writing\n", filename)
+			log.Printf("The file ./%v was successeful writing\n", filename)
 		}
 	}
 }
@@ -77,12 +81,6 @@ func getTopicBody(url string) (*html.Node, error) {
 	}
 
 	return doc, nil
-}
-
-func checkError(message string, err error) {
-	if err != nil {
-		log.Fatal(message, err)
-	}
 }
 
 func (topic *Topic) parseTopic(doc *html.Node) {
@@ -296,4 +294,28 @@ func addCommentData(data [][]string, comment Comment) [][]string {
 		comment.Text,
 		comment.Datetime,
 	})
+}
+
+func writeJsonFile(topic Topic, outputPath string, indent bool) {
+
+	// Create file
+	file, err := os.Create(outputPath)
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	if indent {
+		aJson, err := json.MarshalIndent(topic, "", "\t")
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = file.Write(aJson)
+		checkError("Cannot write to the file", err)
+	} else {
+		aJson, err := json.Marshal(topic)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = file.Write(aJson)
+		checkError("Cannot write to the file", err)
+	}
 }

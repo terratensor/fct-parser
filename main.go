@@ -16,7 +16,7 @@ import (
 type Topic struct {
 	Question       Comment   `json:"question"`
 	LinkedQuestion []Comment `json:"linked_question"`
-	// Comments       []Comment
+	Comments       []Comment `json:"comments"`
 }
 
 type Comment struct {
@@ -24,6 +24,7 @@ type Comment struct {
 	Role     string `json:"role"`
 	Text     string `json:"text"`
 	Datetime string `json:"datetime"`
+	DataID   string `json:"data_id,omitempty"`
 }
 
 func main() {
@@ -109,6 +110,7 @@ func checkError(message string, err error) {
 
 func (topic *Topic) parseTopic(doc *html.Node) {
 	parseQuestionView(doc, topic)
+	parseCommentList(doc, topic)
 }
 
 func parseQuestionView(n *html.Node, topic *Topic) {
@@ -150,6 +152,27 @@ func parseLinkedQuestions(n *html.Node) []Comment {
 	return comments
 }
 
+func parseCommentList(n *html.Node, topic *Topic) {
+	var comments []Comment
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("comment-list", n) {
+			// проходим по узлу с атрибутом class block comment-item}
+			for cl := n.FirstChild; cl != nil; cl = cl.NextSibling {
+				if cl.Type == html.ElementNode && nodeHasRequiredCssClass("comment-item", cl) {
+					comments = append(comments, parseComment(cl))
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(n)
+	topic.Comments = comments
+}
+
 func parseComment(n *html.Node) Comment {
 
 	var nAnchor *html.Node
@@ -173,6 +196,7 @@ func parseComment(n *html.Node) Comment {
 		}
 
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("comment-text", n) {
+			comment.DataID = getRequiredDataAttr("data-id", n)
 			nAnchor = n
 		}
 
@@ -210,6 +234,15 @@ func getInnerText(node *html.Node) string {
 	for el := node.FirstChild; el != nil; el = el.NextSibling {
 		if el.Type == html.TextNode {
 			return el.Data
+		}
+	}
+	return ""
+}
+
+func getRequiredDataAttr(rda string, n *html.Node) string {
+	for _, attr := range n.Attr {
+		if attr.Key == rda {
+			return attr.Val
 		}
 	}
 	return ""

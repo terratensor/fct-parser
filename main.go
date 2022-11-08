@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
@@ -12,25 +14,33 @@ import (
 )
 
 type Topic struct {
-	Question       Comment
-	LinkedQuestion []Comment
+	Question       Comment   `json:"question"`
+	LinkedQuestion []Comment `json:"linked_question"`
 	// Comments       []Comment
 }
 
 type Comment struct {
-	Username string
-	Role     string
-	Text     string
-	Datetime string
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	Text     string `json:"text"`
+	Datetime string `json:"datetime"`
 }
 
 func main() {
 
 	file, err := os.Create("result.csv")
-	checkError("Cannot create file", err)
-	defer file.Close()
+	checkError("cannot create file", err)
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Fatalf("cannot close file: %v\n", err)
+		}
+	}(file)
 
-	for _, url := range os.Args[1:] {
+	boolPtr := flag.Bool("json", true, "a bool")
+	flag.Parse()
+
+	for _, url := range flag.Args() {
 		doc, err := getTopicBody(url)
 		if err != nil {
 			log.Fatalf("parse: %v\n", err)
@@ -57,8 +67,15 @@ func main() {
 		// if err := w.Error(); err != nil {
 		// 	log.Fatal(err)
 		// }
-
-		fmt.Printf("Topic: %v", topic)
+		if *boolPtr {
+			b, err := json.Marshal(topic)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%v", string(b))
+		} else {
+			fmt.Printf("%v", topic)
+		}
 	}
 }
 
@@ -160,7 +177,8 @@ func parseComment(n *html.Node) Comment {
 		}
 
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("datetime", n) {
-			comment.Datetime = getInnerText(n)
+			comment.Datetime = strings.TrimSpace(getInnerText(n))
+			exit = true
 		}
 
 		if nAnchor != nil {
@@ -181,7 +199,6 @@ func parseComment(n *html.Node) Comment {
 
 			bufInnerHtml.Reset()
 			nAnchor = nil
-			exit = true
 		}
 	}
 	f(n)

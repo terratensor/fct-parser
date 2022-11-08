@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,9 +15,9 @@ import (
 )
 
 type Topic struct {
-	Question       Comment   `json:"question"`
-	LinkedQuestion []Comment `json:"linked_question"`
-	Comments       []Comment `json:"comments"`
+	Question        Comment   `json:"question"`
+	LinkedQuestions []Comment `json:"linked_question"`
+	Comments        []Comment `json:"comments"`
 }
 
 type Comment struct {
@@ -29,16 +30,9 @@ type Comment struct {
 
 func main() {
 
-	file, err := os.Create("result.csv")
-	checkError("cannot create file", err)
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Fatalf("cannot close file: %v\n", err)
-		}
-	}(file)
-
-	boolPtr := flag.Bool("json", true, "a bool")
+	var filename string
+	boolPtr := flag.Bool("json", false, "a bool")
+	flag.StringVar(&filename, "file", "topic.csv", "write to file name")
 	flag.Parse()
 
 	for _, url := range flag.Args() {
@@ -48,26 +42,8 @@ func main() {
 		}
 
 		topic := Topic{}
-
 		topic.parseTopic(doc)
-		// if err != nil {
-		// 	log.Fatalf("parse: %v\n", err)
-		// }
 
-		// w := csv.NewWriter(file)
-		//
-		// for _, comment := range comments {
-		// 	if err := w.Write(comment); err != nil {
-		// 		log.Fatalln("error writing record to csv:", err)
-		// 	}
-		// }
-
-		// Write any buffered data to the underlying writer (standard output).
-		// w.Flush()
-		//
-		// if err := w.Error(); err != nil {
-		// 	log.Fatal(err)
-		// }
 		if *boolPtr {
 			b, err := json.Marshal(topic)
 			if err != nil {
@@ -75,7 +51,8 @@ func main() {
 			}
 			fmt.Printf("%v\n\r", string(b))
 		} else {
-			fmt.Printf("%v\n\r", topic)
+			writeCSVFile(topic, "./"+filename)
+			fmt.Printf("The file ./%v was successeful writing\n", filename)
 		}
 	}
 }
@@ -123,7 +100,7 @@ func parseQuestionView(n *html.Node, topic *Topic) {
 			topic.Question = parseComment(n)
 		}
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-questions", n) {
-			topic.LinkedQuestion = parseLinkedQuestions(n)
+			topic.LinkedQuestions = parseLinkedQuestions(n)
 			exit = true
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -262,4 +239,61 @@ func nodeHasRequiredCssClass(rcc string, n *html.Node) bool {
 		}
 	}
 	return false
+}
+
+func writeCSVFile(topic Topic, outputPath string) {
+	// Define header row
+	headerRow := []string{
+		"Username", "Role", "Text", "Datetime",
+	}
+
+	// Data array to write to CSV
+	data := [][]string{
+		headerRow,
+	}
+
+	data = append(data, []string{
+		// Make sure the property order here matches
+		// the one from 'headerRow' !!!
+		topic.Question.Username,
+		topic.Question.Role,
+		topic.Question.Text,
+		topic.Question.Datetime,
+	})
+
+	// Add linked question to output data
+	for _, comment := range topic.LinkedQuestions {
+		data = addCommentData(data, comment)
+	}
+
+	// Add comment list to output data
+	for _, comment := range topic.Comments {
+		data = addCommentData(data, comment)
+	}
+
+	// Create file
+	file, err := os.Create(outputPath)
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	// Create writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write rows into file
+	for _, value := range data {
+		err = writer.Write(value)
+		checkError("Cannot write to file", err)
+	}
+}
+
+func addCommentData(data [][]string, comment Comment) [][]string {
+	return append(data, []string{
+		// Make sure the property order here matches
+		// the one from 'headerRow' !!!
+		comment.Username,
+		comment.Role,
+		comment.Text,
+		comment.Datetime,
+	})
 }

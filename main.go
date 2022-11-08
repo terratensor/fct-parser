@@ -203,12 +203,6 @@ func parseComment(n *html.Node) Comment {
 	}
 	f(n)
 
-	// fmt.Printf("parseComment: %v\n", comment)
-	// Заканчиваем парсинг комментария и выходим из функции если комментарий заполнен
-	// if (comment != Comment{}) {
-	// 	return comment
-	// }
-	// fmt.Printf("%v\n", comment)
 	return comment
 }
 

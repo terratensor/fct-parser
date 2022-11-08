@@ -72,9 +72,9 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("%v", string(b))
+			fmt.Printf("%v\n\r", string(b))
 		} else {
-			fmt.Printf("%v", topic)
+			fmt.Printf("%v\n\r", topic)
 		}
 	}
 }

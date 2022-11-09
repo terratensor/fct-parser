@@ -77,8 +77,9 @@ func main() {
 	if showAll {
 		length = len(question.GetList())
 		for n, item := range question.GetList() {
-			processUrl(item.Url, length, n, file)
+			processUrl(item.Url, length+1, n, file)
 		}
+		processUrl(question.GetCurrent().Url, length, length, file)
 	}
 	if length < 1 {
 		url := question.GetCurrent().Url

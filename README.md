@@ -24,8 +24,10 @@
   -f, --file string[="topic"]   write to file name (default "topic")
   -j, --json                    вывод в формате json (по умолчанию "csv")
   -i, --json-indent             форматированный вывод json с отступами и переносами строк
+  -l, --list                    список страниц с обсуждениями событий с начала СВОДД
 
 ```
+
 ### Примеры
 
 Получение данных темы форума по-заданному url в формате csv с сохранением в файл topic.csv
@@ -61,4 +63,38 @@
 2022/11/09 21:12:35 parse https://фкт-алтай.рф/qa/question/view-44612
 2022/11/09 21:12:35 file topic-2.csv was successful writing
 
+```
+
+Для получения всего списка адресов вопросов с обсуждениями
+```
+./fct-parser -l
+```
+
+```
+https://фкт-алтай.рф/qa/question/view-44538
+https://фкт-алтай.рф/qa/question/view-44612
+https://фкт-алтай.рф/qa/question/view-44707
+https://фкт-алтай.рф/qa/question/view-44757
+https://фкт-алтай.рф/qa/question/view-44883
+https://фкт-алтай.рф/qa/question/view-44962
+https://фкт-алтай.рф/qa/question/view-45044
+https://фкт-алтай.рф/qa/question/view-35650
+https://фкт-алтай.рф/qa/question/view-35298
+https://фкт-алтай.рф/qa/question/view-4604
+https://фкт-алтай.рф/qa/question/view-7533
+https://фкт-алтай.рф/qa/question/view-23174
+https://фкт-алтай.рф/qa/question/view-37945
+https://фкт-алтай.рф/qa/question/view-12422
+https://фкт-алтай.рф/qa/question/view-25867
+https://фкт-алтай.рф/qa/question/view-14365
+https://фкт-алтай.рф/qa/question/view-34312
+https://фкт-алтай.рф/qa/question/view-37694
+https://фкт-алтай.рф/qa/question/view-7279
+https://фкт-алтай.рф/qa/question/view-2656
+https://фкт-алтай.рф/qa/question/view-12734
+https://фкт-алтай.рф/qa/question/view-3893
+https://фкт-алтай.рф/qa/question/view-4910
+https://фкт-алтай.рф/qa/question/view-3467
+https://фкт-алтай.рф/qa/question/view-21294
+https://фкт-алтай.рф/qa/question/view-41574
 ```

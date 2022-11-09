@@ -48,7 +48,7 @@ var showAll bool
 
 func main() {
 
-	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка вопросов в отдельные файлы")
+	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 

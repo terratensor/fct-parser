@@ -1,16 +1,30 @@
 ## Parser страниц вопросов ФКТ-АЛТАЙ
 Утилита командной строки для синтаксического анализа страниц списка вопросов к рубрике «Вопрос-ответ» и сохранением в файл в формате csv или json
 
-Для получения файла надо передать url страницы <br>
-https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/:topic-id
+Для получения файла с последним обсуждением событий СВОДД в формате csv просто запустите утилиту<br>
+```
+./fct-parser 
+```
+
+Для получения всех файлов с обсуждениями событий с начала СВОДД в формате csv запустите утилиту с флагом `-a`<br>
+```
+./fct-parser -a
+```
+
+Для получения файла в формате csv с любым вопросом надо передать url страницы, например
+```
+./fct-parser https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-46796
+```
 
 Опции командной строки
 ----------------------
 
 ```
--f, --file string[="topic"]   write to file name (default "topic")
--j, --json                    вывод в формате json (по умолчанию "csv")
--i, --json-indent             форматированный вывод json с отступами и переносами строк
+  -a, --all                     сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы
+  -f, --file string[="topic"]   write to file name (default "topic")
+  -j, --json                    вывод в формате json (по умолчанию "csv")
+  -i, --json-indent             форматированный вывод json с отступами и переносами строк
+
 ```
 ### Примеры
 
@@ -42,6 +56,9 @@ https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/:topic-id
 ```
 Пример вывода при успешном выполнении команды и получении данных по всем заданным ссылкам
 ```
-2022/11/09 15:59:11 file topic-1.csv was successful writing
-2022/11/09 15:59:13 file topic-2.csv was successful writing
+2022/11/09 21:12:33 parse https://фкт-алтай.рф/qa/question/view-44538
+2022/11/09 21:12:33 file topic-1.csv was successful writing
+2022/11/09 21:12:35 parse https://фкт-алтай.рф/qa/question/view-44612
+2022/11/09 21:12:35 file topic-2.csv was successful writing
+
 ```

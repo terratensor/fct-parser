@@ -1,15 +1,37 @@
-### Parser сайта ФКТ-АЛТАЙ
-Parser страниц списка вопросов рубрики вопрос-ответ https://xn----8sba0bbi0cdm.xn--p1ai/qa/question
+## Parser страниц вопросов ФКТ-АЛТАЙ
+Утилита командной строки для синтаксического анализа страниц списка вопросов к рубрике «Вопрос-ответ» и сохранением в файл в формате csv или json
 
-Парсинг темы с сохранением в файл в формате json отформатированном
-``` 
-$ ./fct-parser -json -indent -file topic-44707.json "https://xn----8sba0b
-bi0cdm.xn--p1ai/qa/question/view-44707"
-2022/11/09 00:10:56 The file ./topic-44707.json was successeful writing
+Для получения файла надо передать url страницы <br>
+https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/:topic-id
+
+Опции командной строки
+----------------------
+
 ```
-Парсинг темы с сохранением в файл в формате csv
-``` 
-$ ./fct-parser -file topic-44707.json "https://xn----8sba0bbi0cdm.xn--p1a
-i/qa/question/view-44707"
-2022/11/09 00:13:04 The file ./topic-44707.json was successeful writing
+-f, --file string[="topic"]   write to file name (default "topic")
+-j, --json                    вывод в формате json (по умолчанию "csv")
+-i, --json-indent             форматированный вывод json с отступами и переносами строк
 ```
+### Примеры
+
+Получение данных темы форума по-заданному url в формате csv с сохранением в файл topic.csv
+
+``` 
+./fct-parser "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
+```
+
+Получение данных темы в формате json без отступов и переносов строк с сохранением в файл topic.json
+``` 
+./fct-parser -j "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
+```
+
+Получение данных темы в формате json с отступами и переносами строк с сохранением в файл topic.json
+``` 
+./fct-parser -i "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
+```
+
+Получение данных темы в формате по умолчанию и сохранением в заданный файл <br>
+``` 
+./fct-parser -f=topic-44707.csv "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
+```
+При использовании опции `-f, --filename` расширение файла при необходимости указывайте самостоятельно

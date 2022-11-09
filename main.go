@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"flag"
 	"fmt"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
 	"io"
 	"log"
@@ -36,13 +36,47 @@ func checkError(message string, err error) {
 
 func main() {
 
+	defaultFilename := "topic"
+	fJson := "json"
+	fCsv := "csv"
+
+	format := fCsv
+
 	var filename string
-	boolPtr := flag.Bool("json", false, "a bool")
-	indent := flag.Bool("indent", false, "a bool")
-	flag.StringVar(&filename, "file", "topic.csv", "write to file name")
+	var jsonFormat bool
+	var indent bool
+
+	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
+	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
+
+	flag.StringVarP(&filename, "file", "f", defaultFilename, "write to file name")
+	flag.Lookup("file").NoOptDefVal = defaultFilename
 	flag.Parse()
 
-	for _, url := range flag.Args() {
+	if jsonFormat || indent {
+		format = fJson
+	}
+
+	var file string
+
+	length := len(flag.Args())
+	for n, url := range flag.Args() {
+
+		switch filename == defaultFilename {
+		case true:
+			if length > 1 {
+				file = fmt.Sprintf("%v-%d.%s", filename, n+1, format)
+			} else {
+				file = fmt.Sprintf("%v.%s", filename, format)
+			}
+		case false:
+			if length > 1 {
+				file = fmt.Sprintf("%v-%d", filename, n+1)
+			} else {
+				file = fmt.Sprintf("%v", filename)
+			}
+		}
+
 		doc, err := getTopicBody(url)
 		if err != nil {
 			log.Fatalf("parse: %v\n", err)
@@ -51,12 +85,13 @@ func main() {
 		topic := Topic{}
 		topic.parseTopic(doc)
 
-		if *boolPtr {
-			writeJsonFile(topic, "./"+filename, *indent)
-			log.Printf("The file ./%v was successeful writing\n", filename)
-		} else {
-			writeCSVFile(topic, "./"+filename)
-			log.Printf("The file ./%v was successeful writing\n", filename)
+		if format == fJson {
+			writeJsonFile(topic, file, indent)
+			log.Printf("The file ./%v was successful writing\n", file)
+		}
+		if format == fCsv {
+			writeCSVFile(topic, file)
+			log.Printf("The file ./%v was successful writing\n", file)
 		}
 	}
 }

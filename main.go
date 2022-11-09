@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/audetv/fct-parser/question"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
 	"io"
@@ -34,18 +35,20 @@ func checkError(message string, err error) {
 	}
 }
 
+var defaultFilename = "topic"
+var fJson = "json"
+var fCsv = "csv"
+
+var format = fCsv
+
+var filename string
+var jsonFormat bool
+var indent bool
+var showAll bool
+
 func main() {
 
-	defaultFilename := "topic"
-	fJson := "json"
-	fCsv := "csv"
-
-	format := fCsv
-
-	var filename string
-	var jsonFormat bool
-	var indent bool
-
+	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка вопросов в отдельные файлы")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 
@@ -60,39 +63,57 @@ func main() {
 	var file string
 
 	length := len(flag.Args())
-	for n, url := range flag.Args() {
 
-		switch filename == defaultFilename {
-		case true:
-			if length > 1 {
-				file = fmt.Sprintf("%v-%d.%s", filename, n+1, format)
-			} else {
-				file = fmt.Sprintf("%v.%s", filename, format)
-			}
-		case false:
-			if length > 1 {
-				file = fmt.Sprintf("%v-%d", filename, n+1)
-			} else {
-				file = fmt.Sprintf("%v", filename)
-			}
+	if showAll {
+		length = len(question.GetList())
+		for n, item := range question.GetList() {
+			processUrl(item.Url, length, n, file)
 		}
+	}
+	if length < 1 {
+		url := question.GetCurrent().Url
+		processUrl(url, length, 0, file)
+	} else {
+		for n, url := range flag.Args() {
+			processUrl(url, length, n, file)
+		}
+	}
+}
 
-		doc, err := getTopicBody(url)
-		if err != nil {
-			log.Fatalf("parse: %v\n", err)
-		}
+func processUrl(url string, length int, n int, file string) {
 
-		topic := Topic{}
-		topic.parseTopic(doc)
+	switch filename == defaultFilename {
+	case true:
+		if length > 1 {
+			file = fmt.Sprintf("%v-%d.%s", filename, n+1, format)
+		} else {
+			file = fmt.Sprintf("%v.%s", filename, format)
+		}
+	case false:
+		if length > 1 {
+			file = fmt.Sprintf("%v-%d", filename, n+1)
+		} else {
+			file = fmt.Sprintf("%v", filename)
+		}
+	}
 
-		if format == fJson {
-			writeJsonFile(topic, file, indent)
-			log.Printf("file %v was successful writing\n", file)
-		}
-		if format == fCsv {
-			writeCSVFile(topic, file)
-			log.Printf("file %v was successful writing\n", file)
-		}
+	doc, err := getTopicBody(url)
+	if err != nil {
+		log.Fatalf("parse: %v\n", err)
+	}
+
+	log.Printf("parse %v\n", url)
+
+	topic := Topic{}
+	topic.parseTopic(doc)
+
+	if format == fJson {
+		writeJsonFile(topic, file, indent)
+		log.Printf("file %v was successful writing\n", file)
+	}
+	if format == fCsv {
+		writeCSVFile(topic, file)
+		log.Printf("file %v was successful writing\n", file)
 	}
 }
 

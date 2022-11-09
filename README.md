@@ -35,3 +35,13 @@ https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/:topic-id
 ./fct-parser -f=topic-44707.csv "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
 ```
 При использовании опции `-f, --filename` расширение файла при необходимости указывайте самостоятельно
+
+Получение данных нескольких тем по url адресам указанным в командной строке и сохранение каждой темы в отдельный файл 
+```
+./fct-parser -i "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707" "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-41574"
+```
+Пример вывода при успешном выполнении команды и получении данных по всем заданным ссылкам
+```
+2022/11/09 15:59:11 file topic-1.csv was successful writing
+2022/11/09 15:59:13 file topic-2.csv was successful writing
+```

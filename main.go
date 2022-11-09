@@ -87,11 +87,11 @@ func main() {
 
 		if format == fJson {
 			writeJsonFile(topic, file, indent)
-			log.Printf("The file ./%v was successful writing\n", file)
+			log.Printf("file %v was successful writing\n", file)
 		}
 		if format == fCsv {
 			writeCSVFile(topic, file)
-			log.Printf("The file ./%v was successful writing\n", file)
+			log.Printf("file %v was successful writing\n", file)
 		}
 	}
 }

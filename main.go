@@ -74,6 +74,11 @@ func main() {
 
 	length := len(flag.Args())
 
+	processAllQuestions(length, file)
+}
+
+func processAllQuestions(length int, file string) {
+
 	if showAll {
 		length = len(question.GetList())
 		for n, item := range question.GetList() {
@@ -81,6 +86,7 @@ func main() {
 		}
 		processUrl(question.GetCurrent().Url, length, length, file)
 	}
+
 	if length < 1 {
 		url := question.GetCurrent().Url
 		processUrl(url, length, 0, file)
@@ -89,6 +95,8 @@ func main() {
 			processUrl(url, length, n, file)
 		}
 	}
+
+	log.Println("все запросы выполнены")
 }
 
 func processUrl(url string, length int, n int, file string) {

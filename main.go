@@ -295,7 +295,7 @@ func processCommentText(node *html.Node) string {
 			text += el.Data
 		}
 		if el.Type == html.ElementNode && el.Data == "blockquote" {
-			text += fmt.Sprintf("\n%v\n", processBlockquote(el))
+			text += fmt.Sprintf("%v\n", processBlockquote(el))
 		}
 		if el.Type == html.ElementNode && nodeHasRequiredCssClass("link", el) {
 			text += strings.TrimSpace(getInnerText(el))
@@ -307,9 +307,11 @@ func processCommentText(node *html.Node) string {
 
 func processBlockquote(node *html.Node) string {
 	var text string
+	newline := ""
 	for el := node.FirstChild; el != nil; el = el.NextSibling {
 		if el.Type == html.TextNode {
-			text += strings.TrimSpace(el.Data)
+			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(el.Data))
+			newline = fmt.Sprintf("\n%v", "")
 		}
 		if el.Type == html.ElementNode && nodeHasRequiredCssClass("author", el) {
 			text += fmt.Sprintf("%v: «", strings.TrimSpace(getInnerText(el)))
@@ -319,7 +321,7 @@ func processBlockquote(node *html.Node) string {
 		}
 	}
 
-	return text
+	return fmt.Sprintf("%v»", strings.TrimSpace(text))
 }
 
 func getInnerText(node *html.Node) string {
@@ -359,7 +361,7 @@ func nodeHasRequiredCssClass(rcc string, n *html.Node) bool {
 func writeCSVFile(topic Topic, outputPath string) {
 	// Define header row
 	headerRow := []string{
-		"Username", "Role", "Text", "Datetime",
+		"Username", "Role", "Text", "Datetime", "DataID",
 	}
 
 	// Data array to write to CSV
@@ -410,6 +412,7 @@ func addCommentData(data [][]string, comment Comment) [][]string {
 		comment.Role,
 		comment.Text,
 		comment.Datetime,
+		comment.DataID,
 	})
 }
 

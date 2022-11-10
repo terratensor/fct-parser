@@ -87,38 +87,42 @@ func processAllQuestions() {
 
 	if showAll {
 		for _, item := range question.GetList() {
-			processUrl(item.Url)
+			processUrl(item)
 		}
-		processUrl(question.GetCurrent().Url)
+		processUrl(question.GetCurrent())
 	}
 
 	if len(flag.Args()) < 1 {
-		uri := question.GetCurrent().Url
-		processUrl(uri)
+		processUrl(question.GetCurrent())
 	} else {
 		for _, uri := range flag.Args() {
-			processUrl(uri)
+			processUrl(question.Item{Url: uri})
 		}
 	}
 
 	log.Println("все запросы выполнены")
 }
 
-func processUrl(uri string) {
+func processUrl(item question.Item) {
 
-	URI, err := url.ParseRequestURI(uri)
+	URI, err := url.ParseRequestURI(item.Url)
 	if err != nil {
 		log.Fatalf("parse request uri: %v\n", err)
 	}
 
-	file := fmt.Sprintf("%v.%s", slug.Make(URI.Path), format)
+	var prefix string
+	if item.Num != "" {
+		prefix += fmt.Sprintf("%v-", item.Num)
+	}
 
-	doc, err := getTopicBody(uri)
+	file := fmt.Sprintf("%v%v.%s", prefix, slug.Make(URI.Path), format)
+
+	doc, err := getTopicBody(item.Url)
 	if err != nil {
 		log.Fatalf("parse: %v\n", err)
 	}
 
-	log.Printf("parse %v\n", uri)
+	log.Printf("parse %v\n", item.Url)
 
 	topic := Topic{}
 	topic.parseTopic(doc)

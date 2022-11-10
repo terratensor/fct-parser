@@ -39,8 +39,7 @@ https://фкт-алтай.рф/qa/question/view-41574
 
 ```
   -a, --all                     сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы
-  -c, --current                 вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД
-  -f, --file string[="topic"]   write to file name (default "topic")
+  -c, --current                 вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД  
   -h, --html-tags               вывод с сохранение с html тегов
   -j, --json                    вывод в формате json (по умолчанию "csv")
   -i, --json-indent             форматированный вывод json с отступами и переносами строк
@@ -66,23 +65,17 @@ https://фкт-алтай.рф/qa/question/view-41574
 ./fct-parser -i "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
 ```
 
-Получение данных темы в формате по умолчанию и сохранением в заданный файл <br>
-``` 
-./fct-parser -f=topic-44707.csv "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707"
-```
-При использовании опции `-f, --filename` расширение файла при необходимости указывайте самостоятельно
-
 Получение данных нескольких тем по url адресам указанным в командной строке и сохранение каждой темы в отдельный файл 
 ```
 ./fct-parser -i "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707" "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-41574"
 ```
 Пример вывода при успешном выполнении команды и получении данных по всем заданным ссылкам
 ```
-2022/11/09 21:12:33 parse https://фкт-алтай.рф/qa/question/view-44538
-2022/11/09 21:12:33 file topic-1.csv was successful writing
-2022/11/09 21:12:35 parse https://фкт-алтай.рф/qa/question/view-44612
-2022/11/09 21:12:35 file topic-2.csv was successful writing
-
+2022/11/10 16:40:56 parse https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-44707
+2022/11/10 16:40:56 file qa-question-view-44707.json was successful writing
+2022/11/10 16:40:58 parse https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-41574
+2022/11/10 16:40:58 file qa-question-view-41574.json was successful writing
+2022/11/10 16:40:58 все запросы выполнены
 ```
 
 Для получения всего списка адресов вопросов с обсуждениями

@@ -46,11 +46,13 @@ var jsonFormat bool
 var indent bool
 var showAll bool
 var list bool
+var current bool
 
 func main() {
 
 	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
-	flag.BoolVarP(&list, "list", "l", false, "список страниц с обсуждениями событий с начала СВОДД")
+	flag.BoolVarP(&list, "list", "l", false, "вывод в консоль списка адресов страниц с обсуждениями событий с начала СВОДД")
+	flag.BoolVarP(&current, "current", "c", false, "вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 
@@ -68,13 +70,22 @@ func main() {
 		for _, item := range question.GetList() {
 			fmt.Printf("%v\n", item.Url)
 		}
-		fmt.Printf("%v\n", question.GetCurrent().Url)
+		printCurrentActiveQuestion()
+		return
+	}
+
+	if current {
+		printCurrentActiveQuestion()
 		return
 	}
 
 	length := len(flag.Args())
 
 	processAllQuestions(length, file)
+}
+
+func printCurrentActiveQuestion() {
+	fmt.Printf("%v\n", question.GetCurrent().Url)
 }
 
 func processAllQuestions(length int, file string) {

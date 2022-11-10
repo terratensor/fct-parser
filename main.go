@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/audetv/fct-parser/question"
+	"github.com/gosimple/slug"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -35,19 +37,16 @@ func checkError(message string, err error) {
 	}
 }
 
-var defaultFilename = "topic"
 var fJson = "json"
 var fCsv = "csv"
-
 var format = fCsv
 
-var filename string
-var jsonFormat bool
-var indent bool
-var showAll bool
-var list bool
-var current bool
-var htmlTags bool
+var jsonFormat,
+	indent,
+	showAll,
+	list,
+	current,
+	htmlTags bool
 
 func main() {
 
@@ -58,15 +57,11 @@ func main() {
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 
-	flag.StringVarP(&filename, "file", "f", defaultFilename, "write to file name")
-	flag.Lookup("file").NoOptDefVal = defaultFilename
 	flag.Parse()
 
 	if jsonFormat || indent {
 		format = fJson
 	}
-
-	var file string
 
 	if list {
 		for _, item := range question.GetList() {
@@ -81,60 +76,49 @@ func main() {
 		return
 	}
 
-	length := len(flag.Args())
-
-	processAllQuestions(length, file)
+	processAllQuestions()
 }
 
 func printCurrentActiveQuestion() {
 	fmt.Printf("%v\n", question.GetCurrent().Url)
 }
 
-func processAllQuestions(length int, file string) {
+func processAllQuestions() {
 
 	if showAll {
-		length = len(question.GetList())
-		for n, item := range question.GetList() {
-			processUrl(item.Url, length+1, n, file)
+		for _, item := range question.GetList() {
+			processUrl(item.Url)
 		}
-		processUrl(question.GetCurrent().Url, length, length, file)
+		processUrl(question.GetCurrent().Url)
 	}
 
-	if length < 1 {
-		url := question.GetCurrent().Url
-		processUrl(url, length, 0, file)
+	if len(flag.Args()) < 1 {
+		uri := question.GetCurrent().Url
+		processUrl(uri)
 	} else {
-		for n, url := range flag.Args() {
-			processUrl(url, length, n, file)
+		for _, uri := range flag.Args() {
+			processUrl(uri)
 		}
 	}
 
 	log.Println("все запросы выполнены")
 }
 
-func processUrl(url string, length int, n int, file string) {
+func processUrl(uri string) {
 
-	switch filename == defaultFilename {
-	case true:
-		if length > 1 {
-			file = fmt.Sprintf("%v-%d.%s", filename, n+1, format)
-		} else {
-			file = fmt.Sprintf("%v.%s", filename, format)
-		}
-	case false:
-		if length > 1 {
-			file = fmt.Sprintf("%v-%d", filename, n+1)
-		} else {
-			file = fmt.Sprintf("%v", filename)
-		}
+	URI, err := url.ParseRequestURI(uri)
+	if err != nil {
+		log.Fatalf("parse request uri: %v\n", err)
 	}
 
-	doc, err := getTopicBody(url)
+	file := fmt.Sprintf("%v.%s", slug.Make(URI.Path), format)
+
+	doc, err := getTopicBody(uri)
 	if err != nil {
 		log.Fatalf("parse: %v\n", err)
 	}
 
-	log.Printf("parse %v\n", url)
+	log.Printf("parse %v\n", uri)
 
 	topic := Topic{}
 	topic.parseTopic(doc)
@@ -270,7 +254,10 @@ func parseComment(n *html.Node) Comment {
 
 		if nAnchor != nil {
 			if n != nAnchor { // don't write the tag and its attributes
-				html.Render(w, n)
+				err := html.Render(w, n)
+				if err != nil {
+					return
+				}
 			}
 		}
 

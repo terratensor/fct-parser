@@ -29,6 +29,7 @@ type Comment struct {
 	Text     string `json:"text"`
 	Datetime string `json:"datetime"`
 	DataID   string `json:"data_id,omitempty"`
+	Count    string `json:"count,omitempty"`
 }
 
 func checkError(message string, err error) {
@@ -89,7 +90,6 @@ func processAllQuestions() {
 		for _, item := range question.GetList() {
 			processUrl(item)
 		}
-		processUrl(question.GetCurrent())
 	}
 
 	if len(flag.Args()) < 1 {
@@ -221,6 +221,7 @@ func parseCommentList(n *html.Node, topic *Topic) {
 		}
 	}
 	f(n)
+	log.Printf("всего комментариев %v\n", len(comments))
 	topic.Comments = comments
 }
 

@@ -47,6 +47,7 @@ var indent bool
 var showAll bool
 var list bool
 var current bool
+var htmlTags bool
 
 func main() {
 
@@ -55,6 +56,7 @@ func main() {
 	flag.BoolVarP(&current, "current", "c", false, "вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
+	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 
 	flag.StringVarP(&filename, "file", "f", defaultFilename, "write to file name")
 	flag.Lookup("file").NoOptDefVal = defaultFilename
@@ -280,7 +282,11 @@ func parseComment(n *html.Node) Comment {
 		}
 
 		if n == nAnchor {
-			comment.Text = bufInnerHtml.String()
+			if htmlTags {
+				comment.Text = bufInnerHtml.String()
+			} else {
+				comment.Text = processCommentText(n)
+			}
 
 			bufInnerHtml.Reset()
 			nAnchor = nil
@@ -289,6 +295,40 @@ func parseComment(n *html.Node) Comment {
 	f(n)
 
 	return comment
+}
+
+func processCommentText(node *html.Node) string {
+	var text string
+	for el := node.FirstChild; el != nil; el = el.NextSibling {
+		if el.Type == html.TextNode {
+			text += el.Data
+		}
+		if el.Type == html.ElementNode && el.Data == "blockquote" {
+			text += fmt.Sprintf("\n%v\n", processBlockquote(el))
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("link", el) {
+			text += strings.TrimSpace(getInnerText(el))
+		}
+	}
+
+	return strings.TrimSpace(text)
+}
+
+func processBlockquote(node *html.Node) string {
+	var text string
+	for el := node.FirstChild; el != nil; el = el.NextSibling {
+		if el.Type == html.TextNode {
+			text += strings.TrimSpace(el.Data)
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("author", el) {
+			text += fmt.Sprintf("%v: «", strings.TrimSpace(getInnerText(el)))
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("link", el) {
+			text += fmt.Sprintf("\n%v\n", strings.TrimSpace(getInnerText(el)))
+		}
+	}
+
+	return text
 }
 
 func getInnerText(node *html.Node) string {

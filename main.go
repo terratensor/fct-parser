@@ -5,7 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/audetv/fct-parser/question"
+	"github.com/audetv/fct-parser/config"
 	"github.com/gosimple/slug"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
@@ -60,50 +60,45 @@ func main() {
 
 	flag.Parse()
 
+	conf := config.ReadConfig()
+
 	if jsonFormat || indent {
 		format = fJson
 	}
 
 	if list {
-		for _, item := range question.GetList() {
-			fmt.Printf("%v\n", item.Url)
-		}
-		printCurrentActiveQuestion()
+		conf.PrintList()
 		return
 	}
 
 	if current {
-		printCurrentActiveQuestion()
+		conf.PrintCurrentActiveQuestion()
 		return
 	}
 
-	processAllQuestions()
+	processAllQuestions(conf)
 }
 
-func printCurrentActiveQuestion() {
-	fmt.Printf("%v\n", question.GetCurrent().Url)
-}
-
-func processAllQuestions() {
+func processAllQuestions(conf config.Config) {
 
 	if showAll {
-		for _, item := range question.GetList() {
+		for _, item := range conf.List {
 			processUrl(item)
 		}
 	}
 
 	if len(flag.Args()) < 1 {
-		processUrl(question.GetCurrent())
+		processUrl(conf.CurrentDiscussion())
 	} else {
 		for _, uri := range flag.Args() {
-			processUrl(question.Item{Url: uri})
+			processUrl(config.Item{Url: uri})
 		}
 	}
 
 	log.Println("все запросы выполнены")
 }
 
-func processUrl(item question.Item) {
+func processUrl(item config.Item) {
 
 	URI, err := url.ParseRequestURI(item.Url)
 	if err != nil {

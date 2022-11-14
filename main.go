@@ -62,6 +62,8 @@ func main() {
 
 	conf := config.ReadConfig()
 
+	log.Printf("%v", len(conf.List))
+
 	if jsonFormat || indent {
 		format = fJson
 	}
@@ -81,6 +83,9 @@ func main() {
 
 func processAllQuestions(conf config.Config) {
 
+	if len(conf.List) == 0 {
+		log.Fatalf("%v", "неправильный формат конфиг файла")
+	}
 	if showAll {
 		for _, item := range conf.List {
 			processUrl(item)

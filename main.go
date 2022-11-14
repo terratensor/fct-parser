@@ -5,12 +5,14 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/audetv/fct-parser/question"
+	"github.com/audetv/fct-parser/config"
+	"github.com/gosimple/slug"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -27,6 +29,7 @@ type Comment struct {
 	Text     string `json:"text"`
 	Datetime string `json:"datetime"`
 	DataID   string `json:"data_id,omitempty"`
+	Count    string `json:"count,omitempty"`
 }
 
 func checkError(message string, err error) {
@@ -35,93 +38,86 @@ func checkError(message string, err error) {
 	}
 }
 
-var defaultFilename = "topic"
 var fJson = "json"
 var fCsv = "csv"
-
 var format = fCsv
 
-var filename string
-var jsonFormat bool
-var indent bool
-var showAll bool
-var list bool
+var jsonFormat,
+	indent,
+	showAll,
+	list,
+	current,
+	htmlTags bool
 
 func main() {
 
 	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
-	flag.BoolVarP(&list, "list", "l", false, "список страниц с обсуждениями событий с начала СВОДД")
+	flag.BoolVarP(&list, "list", "l", false, "вывод в консоль списка адресов страниц с обсуждениями событий с начала СВОДД")
+	flag.BoolVarP(&current, "current", "c", false, "вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
+	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 
-	flag.StringVarP(&filename, "file", "f", defaultFilename, "write to file name")
-	flag.Lookup("file").NoOptDefVal = defaultFilename
 	flag.Parse()
+
+	conf := config.ReadConfig()
 
 	if jsonFormat || indent {
 		format = fJson
 	}
 
-	var file string
-
 	if list {
-		for _, item := range question.GetList() {
-			fmt.Printf("%v\n", item.Url)
-		}
-		fmt.Printf("%v\n", question.GetCurrent().Url)
+		conf.PrintList()
 		return
 	}
 
-	length := len(flag.Args())
-
-	processAllQuestions(length, file)
-}
-
-func processAllQuestions(length int, file string) {
-
-	if showAll {
-		length = len(question.GetList())
-		for n, item := range question.GetList() {
-			processUrl(item.Url, length+1, n, file)
-		}
-		processUrl(question.GetCurrent().Url, length, length, file)
+	if current {
+		conf.PrintCurrentActiveQuestion()
+		return
 	}
 
-	if length < 1 {
-		url := question.GetCurrent().Url
-		processUrl(url, length, 0, file)
+	processAllQuestions(conf)
+}
+
+func processAllQuestions(conf config.Config) {
+
+	if showAll {
+		for _, item := range conf.List {
+			processUrl(item)
+		}
+	}
+
+	if len(flag.Args()) < 1 {
+		processUrl(conf.CurrentDiscussion())
 	} else {
-		for n, url := range flag.Args() {
-			processUrl(url, length, n, file)
+		for _, uri := range flag.Args() {
+			processUrl(config.Item{Url: uri})
 		}
 	}
 
 	log.Println("все запросы выполнены")
 }
 
-func processUrl(url string, length int, n int, file string) {
+func processUrl(item config.Item) {
 
-	switch filename == defaultFilename {
-	case true:
-		if length > 1 {
-			file = fmt.Sprintf("%v-%d.%s", filename, n+1, format)
-		} else {
-			file = fmt.Sprintf("%v.%s", filename, format)
-		}
-	case false:
-		if length > 1 {
-			file = fmt.Sprintf("%v-%d", filename, n+1)
-		} else {
-			file = fmt.Sprintf("%v", filename)
-		}
+	URI, err := url.ParseRequestURI(item.Url)
+	if err != nil {
+		log.Fatalf("parse request uri: %v\n", err)
 	}
 
-	doc, err := getTopicBody(url)
+	var prefix string
+	if item.Num != "" {
+		prefix += fmt.Sprintf("%v-", item.Num)
+	}
+
+	file := fmt.Sprintf("./%v%v.%s", prefix, slug.Make(URI.Path), format)
+
+	doc, err := getTopicBody(item.Url)
 	if err != nil {
 		log.Fatalf("parse: %v\n", err)
 	}
 
-	log.Printf("parse %v\n", url)
+	log.Printf("parse %v\n", item.Url)
 
 	topic := Topic{}
 	topic.parseTopic(doc)
@@ -220,6 +216,7 @@ func parseCommentList(n *html.Node, topic *Topic) {
 		}
 	}
 	f(n)
+	log.Printf("всего комментариев %v\n", len(comments))
 	topic.Comments = comments
 }
 
@@ -257,7 +254,10 @@ func parseComment(n *html.Node) Comment {
 
 		if nAnchor != nil {
 			if n != nAnchor { // don't write the tag and its attributes
-				html.Render(w, n)
+				err := html.Render(w, n)
+				if err != nil {
+					return
+				}
 			}
 		}
 
@@ -269,7 +269,11 @@ func parseComment(n *html.Node) Comment {
 		}
 
 		if n == nAnchor {
-			comment.Text = bufInnerHtml.String()
+			if htmlTags {
+				comment.Text = bufInnerHtml.String()
+			} else {
+				comment.Text = processCommentText(n)
+			}
 
 			bufInnerHtml.Reset()
 			nAnchor = nil
@@ -278,6 +282,42 @@ func parseComment(n *html.Node) Comment {
 	f(n)
 
 	return comment
+}
+
+func processCommentText(node *html.Node) string {
+	var text string
+	for el := node.FirstChild; el != nil; el = el.NextSibling {
+		if el.Type == html.TextNode {
+			text += el.Data
+		}
+		if el.Type == html.ElementNode && el.Data == "blockquote" {
+			text += fmt.Sprintf("%v\n", processBlockquote(el))
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("link", el) {
+			text += strings.TrimSpace(getInnerText(el))
+		}
+	}
+
+	return strings.TrimSpace(text)
+}
+
+func processBlockquote(node *html.Node) string {
+	var text string
+	newline := ""
+	for el := node.FirstChild; el != nil; el = el.NextSibling {
+		if el.Type == html.TextNode {
+			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(el.Data))
+			newline = fmt.Sprintf("\n%v", "")
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("author", el) {
+			text += fmt.Sprintf("%v: «", strings.TrimSpace(getInnerText(el)))
+		}
+		if el.Type == html.ElementNode && nodeHasRequiredCssClass("link", el) {
+			text += fmt.Sprintf("\n%v\n", strings.TrimSpace(getInnerText(el)))
+		}
+	}
+
+	return fmt.Sprintf("%v»", strings.TrimSpace(text))
 }
 
 func getInnerText(node *html.Node) string {
@@ -317,7 +357,7 @@ func nodeHasRequiredCssClass(rcc string, n *html.Node) bool {
 func writeCSVFile(topic Topic, outputPath string) {
 	// Define header row
 	headerRow := []string{
-		"Username", "Role", "Text", "Datetime",
+		"Username", "Role", "Text", "Datetime", "DataID",
 	}
 
 	// Data array to write to CSV
@@ -368,6 +408,7 @@ func addCommentData(data [][]string, comment Comment) [][]string {
 		comment.Role,
 		comment.Text,
 		comment.Datetime,
+		comment.DataID,
 	})
 }
 

@@ -5,11 +5,11 @@ import "time"
 type List []Item
 
 type Item struct {
-	Id    int
-	Num   string
-	Date  string
-	Url   string
-	Count int
+	Id    int    `json:"id"`
+	Num   string `json:"num"`
+	Date  string `json:"date"`
+	Url   string `json:"url"`
+	Count int    `json:"count"`
 }
 
 func GetList() List {
@@ -89,6 +89,9 @@ func GetList() List {
 		{
 			21294, "25", "29.10.2022", "https://фкт-алтай.рф/qa/question/view-21294", 930,
 		},
+		{
+			41574, "26", time.Now().String(), "https://фкт-алтай.рф/qa/question/view-41574", 856,
+		},
 	}
 }
 
@@ -98,6 +101,6 @@ func GetCurrent() Item {
 		"26",
 		time.Now().String(),
 		"https://фкт-алтай.рф/qa/question/view-41574",
-		665,
+		856,
 	}
 }

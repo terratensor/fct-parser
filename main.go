@@ -115,7 +115,7 @@ func processUrl(item question.Item) {
 		prefix += fmt.Sprintf("%v-", item.Num)
 	}
 
-	file := fmt.Sprintf("%v%v.%s", prefix, slug.Make(URI.Path), format)
+	file := fmt.Sprintf("./%v%v.%s", prefix, slug.Make(URI.Path), format)
 
 	doc, err := getTopicBody(item.Url)
 	if err != nil {

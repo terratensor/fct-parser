@@ -27,7 +27,7 @@ var configUrl = "https://raw.githubusercontent.com/audetv/fct-parser/main/config
 func ReadConfig() Config {
 	file, err := os.OpenFile("./config.json", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err == nil {
-		downloadConfigFile(file)
+		DownloadConfigFile(file)
 	}
 
 	fileBytes, err := os.ReadFile("./config.json")
@@ -37,27 +37,37 @@ func ReadConfig() Config {
 
 	var conf Config
 	err = json.Unmarshal(fileBytes, &conf)
+	// TODO возвращаем пустой конфиг при ошибке, надо подумать как сделать по-другому и сделать рефакторинг
 	if err != nil {
-		log.Fatal("Cannot unmarshal json data", err)
+		conf = Config{List: []Item{}}
+		// log.Fatal("неправильный формат config файла: ", err)
 	}
 	return conf
+}
+
+func (c *Config) IsValidConfig() {
+	if len(c.List) == 0 {
+		log.Fatalf("%v", "неправильный формат конфиг файла, для загрузки конфиг файла используйте опцию fct-parcer -u")
+	}
 }
 
 func (c *Config) CurrentDiscussion() Item {
 	return c.List[len(c.List)-1]
 }
 
-func (c *Config) PrintCurrentActiveQuestion() {
+func (c *Config) PrintCurrentDiscussion() {
+	c.IsValidConfig()
 	fmt.Printf("%v\n", c.CurrentDiscussion().Url)
 }
 
 func (c *Config) PrintList() {
+	c.IsValidConfig()
 	for _, item := range c.List {
 		fmt.Printf("%v\n", item.Url)
 	}
 }
 
-func downloadConfigFile(file *os.File) {
+func DownloadConfigFile(file *os.File) {
 	log.Println("downloading config file config.json")
 
 	resp, err := http.Get(configUrl)

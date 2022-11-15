@@ -15,11 +15,10 @@ type Config struct {
 type List []Item
 
 type Item struct {
-	Id       int    `json:"id"`
-	Num      string `json:"num"`
-	Date     string `json:"date"`
-	Url      string `json:"url"`
-	Comments int    `json:"comments"`
+	Id   int    `json:"id"`
+	Num  string `json:"num"`
+	Date string `json:"date"`
+	Url  string `json:"url"`
 }
 
 var configUrl = "https://raw.githubusercontent.com/audetv/fct-parser/main/config.json"

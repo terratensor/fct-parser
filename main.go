@@ -47,7 +47,8 @@ var jsonFormat,
 	showAll,
 	list,
 	current,
-	htmlTags bool
+	htmlTags,
+	updateConfig bool
 
 func main() {
 
@@ -57,9 +58,18 @@ func main() {
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
+	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
 
 	flag.Parse()
 
+	if updateConfig {
+		file, err := os.Create("./config.json")
+		if err != nil {
+			log.Fatalf("update config: %v", err)
+		}
+		config.DownloadConfigFile(file)
+		return
+	}
 	conf := config.ReadConfig()
 
 	if jsonFormat || indent {
@@ -72,7 +82,7 @@ func main() {
 	}
 
 	if current {
-		conf.PrintCurrentActiveQuestion()
+		conf.PrintCurrentDiscussion()
 		return
 	}
 
@@ -82,27 +92,40 @@ func main() {
 func processAllQuestions(conf config.Config) {
 
 	if showAll {
+		conf.IsValidConfig()
 		for _, item := range conf.List {
-			processUrl(item)
+			err := processUrl(item)
+			if err != nil {
+				log.Printf("skipped: %v", err)
+				continue
+			}
 		}
+		return
 	}
 
 	if len(flag.Args()) < 1 {
-		processUrl(conf.CurrentDiscussion())
+		conf.IsValidConfig()
+		err := processUrl(conf.CurrentDiscussion())
+		if err != nil {
+			log.Printf("skipped: %v", err)
+			return
+		}
 	} else {
 		for _, uri := range flag.Args() {
-			processUrl(config.Item{Url: uri})
+			err := processUrl(config.Item{Url: uri})
+			if err != nil {
+				log.Printf("skipped: %v", err)
+				continue
+			}
 		}
 	}
-
-	log.Println("все запросы выполнены")
 }
 
-func processUrl(item config.Item) {
+func processUrl(item config.Item) error {
 
 	URI, err := url.ParseRequestURI(item.Url)
 	if err != nil {
-		log.Fatalf("parse request uri: %v\n", err)
+		return fmt.Errorf("parse request uri: %v\n", err)
 	}
 
 	var prefix string
@@ -114,7 +137,7 @@ func processUrl(item config.Item) {
 
 	doc, err := getTopicBody(item.Url)
 	if err != nil {
-		log.Fatalf("parse: %v\n", err)
+		return fmt.Errorf("%v\n", err)
 	}
 
 	log.Printf("parse %v\n", item.Url)
@@ -130,6 +153,7 @@ func processUrl(item config.Item) {
 		writeCSVFile(topic, file)
 		log.Printf("file %v was successful writing\n", file)
 	}
+	return nil
 }
 
 func getTopicBody(url string) (*html.Node, error) {
@@ -372,6 +396,7 @@ func writeCSVFile(topic Topic, outputPath string) {
 		topic.Question.Role,
 		topic.Question.Text,
 		topic.Question.Datetime,
+		topic.Question.DataID,
 	})
 
 	// Add linked question to output data

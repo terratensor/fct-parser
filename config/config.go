@@ -22,15 +22,18 @@ type Item struct {
 	Url  string `json:"url"`
 }
 
-var configUrl = "https://raw.githubusercontent.com/audetv/fct-parser/main/config.json"
+var (
+	configUrl  = "https://raw.githubusercontent.com/audetv/fct-parser/main/config.json"
+	configFile = "./config.json"
+)
 
 func ReadConfig() Config {
 	var body []byte
-	_, err := os.Open("./config.json")
+	_, err := os.Open(configFile)
 
 	if err == nil {
-		log.Printf("reading local config file")
-		body, err = os.ReadFile("./config.json")
+		log.Printf("using config file %v", configFile)
+		body, err = os.ReadFile(configFile)
 		if err != nil {
 			log.Fatal("Cannot read file", err)
 		}
@@ -72,7 +75,7 @@ func (c *Config) PrintList() {
 }
 
 func FetchingConfigFile() []byte {
-	log.Printf("fetching config file: %v", configUrl)
+	log.Printf("fetching config file %v", configUrl)
 
 	respBody := getResponseBody(configUrl)
 	defer respBody.Close()

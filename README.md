@@ -12,6 +12,7 @@
 ```
 
 Для получения всех файлов с обсуждениями событий с начала СВОДД в формате csv запустите утилиту с флагом `-a`<br>
+После запуска утилита последовательно сделает запросы по url адресам из файла конфигурации config.json и сохранит результаты в файлы csv
 ```
 ./fct-parser -a
 ```
@@ -31,9 +32,14 @@ https://фкт-алтай.рф/qa/question/view-41574
 
 Для получения файла в формате csv с любым вопросом надо передать url страницы, например
 ```
-./fct-parser https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-46796
+./fct-parser https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-35030
 ```
-
+```
+2022/11/20 21:27:37 fetching config file https://raw.githubusercontent.com/audetv/fct-parser/main/config.json
+2022/11/20 21:27:38 parse https://фкт-алтай.рф/qa/question/view-35030
+2022/11/20 21:27:38 всего комментариев 101
+2022/11/20 21:27:38 file ./qa-question-view-35030.csv was successful writing
+```
 Опции командной строки
 ----------------------
 

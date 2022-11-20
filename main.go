@@ -331,7 +331,7 @@ func processBlockquote(node *html.Node) string {
 	for el := node.FirstChild; el != nil; el = el.NextSibling {
 		if el.Type == html.TextNode {
 			// UnescapeString для el.Data нужен, чтобы избавляться от &quot; в цитатах
-			// для последущего корректного чтения в exel, кстати гугл таблицы корректно обрабатывали эти циттаты и не ломали csv
+			// для последующего корректного чтения в exel, кстати гугл таблицы корректно обрабатывали эти цитаты и не ломали csv
 			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(html.UnescapeString(el.Data)))
 			newline = fmt.Sprintf("\n%v", "")
 		}

@@ -330,7 +330,9 @@ func processBlockquote(node *html.Node) string {
 	newline := ""
 	for el := node.FirstChild; el != nil; el = el.NextSibling {
 		if el.Type == html.TextNode {
-			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(el.Data))
+			// UnescapeString для el.Data нужен, чтобы избавляться от &quot; в цитатах
+			// для последующего корректного чтения в exel, кстати гугл таблицы корректно обрабатывали эти цитаты и не ломали csv
+			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(html.UnescapeString(el.Data)))
 			newline = fmt.Sprintf("\n%v", "")
 		}
 		if el.Type == html.ElementNode && nodeHasRequiredCssClass("author", el) {
@@ -396,7 +398,7 @@ func writeCSVFile(topic Topic, outputPath string) {
 		topic.Question.Role,
 		topic.Question.Text,
 		topic.Question.Datetime,
-		topic.Question.DataID,
+		//topic.Question.DataID,
 	})
 
 	// Add linked question to output data

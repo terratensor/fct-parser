@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 type Topic struct {
@@ -23,12 +24,18 @@ type Topic struct {
 	Comments        []Comment `json:"comments"`
 }
 
+const TypeQuestion = "1"
+const TypeLinkedQuestion = "2"
+const TypeComment = "3"
+
 type Comment struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	Text     string `json:"text"`
 	Datetime string `json:"datetime"`
 	DataID   string `json:"data_id,omitempty"`
+	ParentID string `json:"parent_id"`
+	Type     string `json:"type"`
 	Count    string `json:"count,omitempty"`
 }
 
@@ -142,8 +149,9 @@ func processUrl(item config.Item) error {
 
 	log.Printf("parse %v\n", item.Url)
 
+	parentID := parseViewId(item.Url)
 	topic := Topic{}
-	topic.parseTopic(doc)
+	topic.parseTopic(parentID, doc)
 
 	if format == fJson {
 		writeJsonFile(topic, file, indent)
@@ -154,6 +162,27 @@ func processUrl(item config.Item) error {
 		log.Printf("file %v was successful writing\n", file)
 	}
 	return nil
+}
+
+func parseViewId(s string) string {
+	defer duration(track("foo"))
+
+	return strings.ReplaceAll(s, "https://фкт-алтай.рф/qa/question/view-", "")
+
+	// nLen := 0
+	// for i := 0; i < len(s); i++ {
+	// 	if b := s[i]; '0' <= b && b <= '9' {
+	// 		nLen++
+	// 	}
+	// }
+	// var n = make([]int, 0, nLen)
+	// for i := 0; i < len(s); i++ {
+	// 	if b := s[i]; '0' <= b && b <= '9' {
+	// 		n = append(n, int(b)-'0')
+	// 	}
+	// }
+	//
+	// return strings.Trim(strings.Replace(fmt.Sprint(n), " ", ",", -1), "[]")
 }
 
 func getTopicBody(url string) (*html.Node, error) {
@@ -178,22 +207,22 @@ func getTopicBody(url string) (*html.Node, error) {
 	return doc, nil
 }
 
-func (topic *Topic) parseTopic(doc *html.Node) {
-	parseQuestionView(doc, topic)
-	parseCommentList(doc, topic)
+func (topic *Topic) parseTopic(parentID string, doc *html.Node) {
+	parseQuestionView(doc, topic, parentID)
+	parseCommentList(doc, topic, parentID)
 }
 
-func parseQuestionView(n *html.Node, topic *Topic) {
+func parseQuestionView(n *html.Node, topic *Topic, parentID string) {
 
 	exit := false
 
 	var f func(*html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("question-view", n) {
-			topic.Question = parseComment(n)
+			topic.Question = parseComment(n, TypeQuestion, "")
 		}
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-questions", n) {
-			topic.LinkedQuestions = parseLinkedQuestions(n)
+			topic.LinkedQuestions = parseLinkedQuestions(n, parentID)
 			exit = true
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -206,13 +235,13 @@ func parseQuestionView(n *html.Node, topic *Topic) {
 	f(n)
 }
 
-func parseLinkedQuestions(n *html.Node) []Comment {
+func parseLinkedQuestions(n *html.Node, parentID string) []Comment {
 	var comments []Comment
 
 	var f func(*html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-question", n) {
-			comments = append(comments, parseComment(n))
+			comments = append(comments, parseComment(n, TypeLinkedQuestion, parentID))
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			f(c)
@@ -222,7 +251,7 @@ func parseLinkedQuestions(n *html.Node) []Comment {
 	return comments
 }
 
-func parseCommentList(n *html.Node, topic *Topic) {
+func parseCommentList(n *html.Node, topic *Topic, parentID string) {
 	var comments []Comment
 
 	var f func(*html.Node)
@@ -231,7 +260,7 @@ func parseCommentList(n *html.Node, topic *Topic) {
 			// проходим по узлу с атрибутом class block comment-item}
 			for cl := n.FirstChild; cl != nil; cl = cl.NextSibling {
 				if cl.Type == html.ElementNode && nodeHasRequiredCssClass("comment-item", cl) {
-					comments = append(comments, parseComment(cl))
+					comments = append(comments, parseComment(cl, TypeComment, parentID))
 				}
 			}
 		}
@@ -244,7 +273,7 @@ func parseCommentList(n *html.Node, topic *Topic) {
 	topic.Comments = comments
 }
 
-func parseComment(n *html.Node) Comment {
+func parseComment(n *html.Node, t string, parentID string) Comment {
 
 	var nAnchor *html.Node
 	var bufInnerHtml bytes.Buffer
@@ -252,6 +281,8 @@ func parseComment(n *html.Node) Comment {
 	w := io.Writer(&bufInnerHtml)
 
 	comment := Comment{}
+	comment.Type = t
+	comment.ParentID = parentID
 
 	exit := false
 
@@ -330,7 +361,7 @@ func processBlockquote(node *html.Node) string {
 	newline := ""
 	for el := node.FirstChild; el != nil; el = el.NextSibling {
 		if el.Type == html.TextNode {
-			// UnescapeString для el.Data нужен, чтобы избавляться от &quot; в цитатах
+			// UnescapeString для Data нужен, чтобы избавляться от &quot; в цитатах
 			// для последующего корректного чтения в exel, кстати гугл таблицы корректно обрабатывали эти цитаты и не ломали csv
 			text += fmt.Sprintf("%v%v", newline, strings.TrimSpace(html.UnescapeString(el.Data)))
 			newline = fmt.Sprintf("\n%v", "")
@@ -398,7 +429,7 @@ func writeCSVFile(topic Topic, outputPath string) {
 		topic.Question.Role,
 		topic.Question.Text,
 		topic.Question.Datetime,
-		//topic.Question.DataID,
+		topic.Question.DataID,
 	})
 
 	// Add linked question to output data
@@ -461,4 +492,12 @@ func writeJsonFile(topic Topic, outputPath string, indent bool) {
 		_, err = file.Write(aJson)
 		checkError("Cannot write to the file", err)
 	}
+}
+
+func track(msg string) (string, time.Time) {
+	return msg, time.Now()
+}
+
+func duration(msg string, start time.Time) {
+	log.Printf("%v: %v\n", msg, time.Since(start))
 }

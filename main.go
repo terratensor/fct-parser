@@ -220,6 +220,7 @@ func parseQuestionView(n *html.Node, topic *Topic, parentID string) {
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("question-view", n) {
 			topic.Question = parseComment(n, TypeQuestion, "")
+			topic.Question.DataID = parentID
 		}
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("linked-questions", n) {
 			topic.LinkedQuestions = parseLinkedQuestions(n, parentID)

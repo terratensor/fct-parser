@@ -199,9 +199,16 @@
     {
       "id": 12348,
       "num": "29",
-      "date": "",
+      "date": "08.02.2023",
       "url": "https://фкт-алтай.рф/qa/question/view-12348",
-      "comments": 32
+      "comments": 781
+    },
+    {
+      "id": 8162,
+      "num": "30",
+      "date": "",
+      "url": "https://фкт-алтай.рф/qa/question/view-8162",
+      "comments": 186
     }   
   ]
 }

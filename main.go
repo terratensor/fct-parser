@@ -266,6 +266,8 @@ func parseComment(n *html.Node) Comment {
 			comment.Role = getInnerText(n)
 		}
 
+		// Находим ноду с типом ElementNode и атрибутом со значением comment-text
+		// Переменной nAnchor присваиваем эту ноду
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("comment-text", n) {
 			comment.DataID = getRequiredDataAttr("data-id", n)
 			nAnchor = n
@@ -276,8 +278,13 @@ func parseComment(n *html.Node) Comment {
 			exit = true
 		}
 
+		// don't write the tag and its attributes
 		if nAnchor != nil {
-			if n != nAnchor { // don't write the tag and its attributes
+			// Fixed bug. Html render without nested siblings.
+			// Не пишем тег и его атрибуты.
+			// Но нам нужны все потомки nextSibling, без своих потомков от blockquote и link.
+			// проверяем по родительской ноде с атрибутом class comment-text.
+			if n != nAnchor && nodeHasRequiredCssClass("comment-text", n.Parent) {
 				err := html.Render(w, n)
 				if err != nil {
 					return

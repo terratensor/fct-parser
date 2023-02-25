@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -50,6 +51,8 @@ var jsonFormat,
 	htmlTags,
 	updateConfig bool
 
+var outputPath string
+
 func main() {
 
 	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
@@ -59,6 +62,7 @@ func main() {
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
+	flag.StringVarP(&outputPath, "output", "o", "./", "путь сохранения файлов")
 
 	flag.Parse()
 
@@ -133,7 +137,8 @@ func processUrl(item config.Item) error {
 		prefix += fmt.Sprintf("%v-", item.Num)
 	}
 
-	file := fmt.Sprintf("./%v%v.%s", prefix, slug.Make(URI.Path), format)
+	file := fmt.Sprintf("%v/%v%v.%s", outputPath, prefix, slug.Make(URI.Path), format)
+	file = filepath.Clean(file)
 
 	doc, err := getTopicBody(item.Url)
 	if err != nil {

@@ -405,7 +405,7 @@ func writeCSVFile(topic Topic, outputPath string) {
 		topic.Question.Role,
 		topic.Question.Text,
 		topic.Question.Datetime,
-		//topic.Question.DataID,
+		topic.Question.DataID,
 	})
 
 	// Add linked question to output data

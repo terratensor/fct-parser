@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -57,6 +58,8 @@ var jsonFormat,
 	htmlTags,
 	updateConfig bool
 
+var outputPath string
+
 func main() {
 
 	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
@@ -66,6 +69,7 @@ func main() {
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
+	flag.StringVarP(&outputPath, "output", "o", "./", "путь сохранения файлов")
 
 	flag.Parse()
 
@@ -140,7 +144,8 @@ func processUrl(item config.Item) error {
 		prefix += fmt.Sprintf("%v-", item.Num)
 	}
 
-	file := fmt.Sprintf("./%v%v.%s", prefix, slug.Make(URI.Path), format)
+	file := fmt.Sprintf("%v/%v%v.%s", outputPath, prefix, slug.Make(URI.Path), format)
+	file = filepath.Clean(file)
 
 	doc, err := getTopicBody(item.Url)
 	if err != nil {
@@ -298,6 +303,8 @@ func parseComment(n *html.Node, t string, parentID string) Comment {
 			comment.Role = getInnerText(n)
 		}
 
+		// Находим ноду с типом ElementNode и атрибутом со значением comment-text
+		// Переменной nAnchor присваиваем эту ноду
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("comment-text", n) {
 			comment.DataID = getRequiredDataAttr("data-id", n)
 			nAnchor = n
@@ -308,8 +315,13 @@ func parseComment(n *html.Node, t string, parentID string) Comment {
 			exit = true
 		}
 
+		// don't write the tag and its attributes
 		if nAnchor != nil {
-			if n != nAnchor { // don't write the tag and its attributes
+			// Fixed bug. Html render without nested siblings.
+			// Не пишем тег и его атрибуты.
+			// Но нам нужны все потомки nextSibling, без своих потомков от blockquote и link.
+			// проверяем по родительской ноде с атрибутом class comment-text.
+			if n != nAnchor && nodeHasRequiredCssClass("comment-text", n.Parent) {
 				err := html.Render(w, n)
 				if err != nil {
 					return

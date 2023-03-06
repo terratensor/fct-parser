@@ -116,11 +116,12 @@ func processAllQuestions(conf config.Config) {
 		return
 	}
 
+	// start 2000
 	if parseFct {
 		var item config.Item
-		for i := 2419; i < 10000; i++ {
+		for i := 2000; i < 48000; i++ {
 			item.Id = i
-			item.Url = fmt.Sprintf("%v%v", "https://xn----8sba0bbi0cdm.xn--p1ai/qa/question/view-", i)
+			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
 			err := processUrl(item)
 			if err != nil {
 				log.Printf("skipped: %v", err)

@@ -56,6 +56,7 @@ var jsonFormat,
 	list,
 	current,
 	htmlTags,
+	parseFct,
 	updateConfig bool
 
 var outputPath string
@@ -68,6 +69,7 @@ func main() {
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
+	flag.BoolVarP(&parseFct, "parse-fct", "p", false, "парсить все вопросы с сайта")
 	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
 	flag.StringVarP(&outputPath, "output", "o", "./", "путь сохранения файлов")
 
@@ -110,6 +112,22 @@ func processAllQuestions(conf config.Config) {
 				log.Printf("skipped: %v", err)
 				continue
 			}
+		}
+		return
+	}
+
+	// start 2000
+	if parseFct {
+		var item config.Item
+		for i := 2000; i < 48000; i++ {
+			item.Id = i
+			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
+			err := processUrl(item)
+			if err != nil {
+				log.Printf("skipped: %v", err)
+				continue
+			}
+			log.Printf("Done!")
 		}
 		return
 	}
@@ -191,7 +209,14 @@ func parseViewId(s string) string {
 }
 
 func getTopicBody(url string) (*html.Node, error) {
-	resp, err := http.Get(url)
+	// Для того чтобы не следовать автоматическим перенаправлениям,
+	// создадим свой экземпляр http.Client с методом проверки CheckRedirect.
+	// Это поможет нам возвращать код состояния и адрес до перенаправления.
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}}
+	resp, err := client.Get(url)
 
 	if err != nil {
 		return nil, err

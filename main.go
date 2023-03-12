@@ -71,7 +71,7 @@ func main() {
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
 	flag.BoolVarP(&parseFct, "parse-fct", "p", false, "парсить все вопросы с сайта")
 	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
-	flag.StringVarP(&outputPath, "output", "o", "./", "путь сохранения файлов")
+	flag.StringVarP(&outputPath, "output", "o", "./parsed-files", "путь сохранения файлов")
 
 	flag.Parse()
 

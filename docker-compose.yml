@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  fct-parser:
+    image: ghcr.io/audetv/fct-search-parser:main-1
+    container_name: fct-parser
+    volumes:
+      - myvol2:/app/parsed-files
+volumes:
+  myvol2:

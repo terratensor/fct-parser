@@ -6,3 +6,9 @@ build:
 	GOOS=linux GOARCH=amd64 go build -o ./dist/fct-parser.linux.amd64
 
 
+
+docker-build:
+	docker --log-level=debug build --pull --file=docker/Dockerfile --tag=${REGISTRY}/fct-search-parser:${IMAGE_TAG} .
+
+push:
+	docker push ${REGISTRY}/fct-search-parser:${IMAGE_TAG}

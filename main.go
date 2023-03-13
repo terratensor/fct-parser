@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/audetv/fct-parser/config"
+	"github.com/audetv/fct-parser/db/sql/pgstore"
+	"github.com/audetv/fct-parser/repos/question"
 	"github.com/gosimple/slug"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
@@ -14,7 +17,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -99,15 +104,31 @@ func main() {
 		return
 	}
 
-	processAllQuestions(conf)
+	// Создаем стор, это из бизнес логики, там где интерфейс, определяем дсн, контекст создаем
+	var qst question.Store
+	dsn := "postgres://app:secret@localhost:54321/app?sslmode=disable"
+	pgst, err := pgstore.NewQuestions(dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pgst.Close()
+	qst = pgst
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	qs := question.NewQuestions(qst)
+
+	processAllQuestions(ctx, qs, conf)
+	cancel()
 }
 
-func processAllQuestions(conf config.Config) {
+// прокидываем контекст и постгрес коллекцию
+// дальше прокидываем это ниже во все функции processUrl
+func processAllQuestions(ctx context.Context, qs *question.Questions, conf config.Config) {
 
 	if showAll {
 		conf.IsValidConfig()
 		for _, item := range conf.List {
-			err := processUrl(item)
+			err := processUrl(ctx, qs, item)
 			if err != nil {
 				log.Printf("skipped: %v", err)
 				continue
@@ -122,7 +143,7 @@ func processAllQuestions(conf config.Config) {
 		for i := 2000; i < 48000; i++ {
 			item.Id = i
 			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
-			err := processUrl(item)
+			err := processUrl(ctx, qs, item)
 			if err != nil {
 				log.Printf("skipped: %v", err)
 				continue
@@ -134,14 +155,14 @@ func processAllQuestions(conf config.Config) {
 
 	if len(flag.Args()) < 1 {
 		conf.IsValidConfig()
-		err := processUrl(conf.CurrentDiscussion())
+		err := processUrl(ctx, qs, conf.CurrentDiscussion())
 		if err != nil {
 			log.Printf("skipped: %v", err)
 			return
 		}
 	} else {
 		for _, uri := range flag.Args() {
-			err := processUrl(config.Item{Url: uri})
+			err := processUrl(ctx, qs, config.Item{Url: uri})
 			if err != nil {
 				log.Printf("skipped: %v", err)
 				continue
@@ -150,7 +171,8 @@ func processAllQuestions(conf config.Config) {
 	}
 }
 
-func processUrl(item config.Item) error {
+// Тут добавлено моздание вопроса из бизнес логики
+func processUrl(ctx context.Context, qs *question.Questions, item config.Item) error {
 
 	URI, err := url.ParseRequestURI(item.Url)
 	if err != nil {
@@ -176,6 +198,9 @@ func processUrl(item config.Item) error {
 	topic := Topic{}
 	topic.parseTopic(parentID, doc)
 
+	// Создаем вопрос
+	createQuestion(ctx, qs, topic.Comments)
+
 	if format == fJson {
 		writeJsonFile(topic, file, indent)
 		log.Printf("file %v was successful writing\n", file)
@@ -185,6 +210,36 @@ func processUrl(item config.Item) error {
 		log.Printf("file %v was successful writing\n", file)
 	}
 	return nil
+}
+
+// Странная функция, потипу хендлера в роутере
+func createQuestion(ctx context.Context, qs *question.Questions, comments []Comment) {
+
+	for key, comment := range comments {
+		dataId, _ := strconv.Atoi(comment.DataID)
+		parentID, _ := strconv.Atoi(comment.ParentID)
+
+		datetime := parseDate(comment.Datetime)
+
+		question := question.Question{
+			DataID:       dataId,
+			ParentDataID: parentID,
+			Position:     key + 1,
+			Username:     comment.Username,
+			UserRole:     comment.Role,
+			Text:         comment.Text,
+			Date:         datetime,
+		}
+		qs.Create(ctx, question)
+	}
+
+}
+
+// преобразовываем дату по шаблону в таймстамп
+func parseDate(date string) time.Time {
+	const layout = "15:04 02.01.2006"
+	t, _ := time.Parse(layout, date)
+	return t
 }
 
 func parseViewId(s string) string {

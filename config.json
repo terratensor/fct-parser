@@ -201,14 +201,21 @@
       "num": "29",
       "date": "08.02.2023",
       "url": "https://фкт-алтай.рф/qa/question/view-12348",
-      "comments": 781
+      "comments": 957
     },
     {
       "id": 8162,
       "num": "30",
-      "date": "",
+      "date": "12.03.2023",
       "url": "https://фкт-алтай.рф/qa/question/view-8162",
       "comments": 186
+    },
+     {
+      "id": 6006,
+      "num": "31",
+      "date": "",
+      "url": "https://фкт-алтай.рф/qa/question/view-6006",
+      "comments": 0
     }   
   ]
 }

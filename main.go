@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/audetv/fct-parser/config"
+	"github.com/avast/retry-go"
 	"github.com/gosimple/slug"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/html"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -60,6 +62,8 @@ var jsonFormat,
 	updateConfig bool
 
 var outputPath string
+
+var wg sync.WaitGroup
 
 func main() {
 
@@ -119,16 +123,20 @@ func processAllQuestions(conf config.Config) {
 	// start 2000
 	if parseFct {
 		var item config.Item
-		for i := 2000; i < 48000; i++ {
+		for i := 47874; i < 48100; i++ {
 			item.Id = i
 			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
-			err := processUrl(item)
-			if err != nil {
-				log.Printf("skipped: %v", err)
-				continue
-			}
-			log.Printf("Done!")
+			wg.Add(1)
+			go gopherUrl(item)
+			time.Sleep(50 * time.Millisecond)
+			//err := processUrl(item)
+			//if err != nil {
+			//	log.Printf("skipped: %v", err)
+			//	continue
+			//}
+			//log.Printf("Done!")
 		}
+		wg.Wait()
 		return
 	}
 
@@ -148,6 +156,15 @@ func processAllQuestions(conf config.Config) {
 			}
 		}
 	}
+}
+
+func gopherUrl(item config.Item) {
+	defer wg.Done()
+	err := processUrl(item)
+	if err != nil {
+		log.Printf("skipped: %v", err)
+	}
+	log.Printf("Done!")
 }
 
 func processUrl(item config.Item) error {
@@ -216,7 +233,8 @@ func getTopicBody(url string) (*html.Node, error) {
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}}
-	resp, err := client.Get(url)
+	//resp, err := client.Get(url)
+	resp, err := fetchDataWithRetries(client, url)
 
 	if err != nil {
 		return nil, err
@@ -235,6 +253,40 @@ func getTopicBody(url string) (*html.Node, error) {
 	}
 
 	return doc, nil
+}
+
+// fetchDataWithRetries is your wrapped retrieval.
+// It works with a static configuration for the retries,
+// but obviously, you can generalize this function further.
+func fetchDataWithRetries(client *http.Client, url string) (r *http.Response, err error) {
+	retry.Do(
+		// The actual function that does "stuff"
+		func() error {
+			log.Printf("Retrieving data from '%s'", url)
+			r, err = client.Get(url)
+			return err
+		},
+		// A function to decide whether you actually want to
+		// retry or not. In this case, it would make sense
+		// to actually stop retrying, since the host does not exist.
+		// Return true if you want to retry, false if not.
+		retry.RetryIf(
+			func(error) bool {
+				log.Printf("Retrieving data: %s", err)
+				log.Printf("Deciding whether to retry")
+				return true
+			}),
+		retry.OnRetry(func(try uint, orig error) {
+			log.Printf("Retrying to fetch data. Try: %d", try+2)
+		}),
+		retry.Attempts(3),
+		// Basically, we are setting up a delay
+		// which randoms between 2 and 4 seconds.
+		retry.Delay(4*time.Second),
+		retry.MaxJitter(1*time.Second),
+	)
+
+	return
 }
 
 func (topic *Topic) parseTopic(parentID string, doc *html.Node) {

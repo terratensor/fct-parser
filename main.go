@@ -120,10 +120,10 @@ func processAllQuestions(conf config.Config) {
 		return
 	}
 
-	// start 2000
+	// start 2000 / 47874
 	if parseFct {
 		var item config.Item
-		for i := 47874; i < 48100; i++ {
+		for i := 47649; i < 48100; i++ {
 			item.Id = i
 			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
 			wg.Add(1)
@@ -590,4 +590,9 @@ func track(msg string) (string, time.Time) {
 
 func duration(msg string, start time.Time) {
 	log.Printf("%v: %v\n", msg, time.Since(start))
+}
+
+func parseQuestionPage() {
+	//url := "https://фкт-алтай.рф/qa/question"
+
 }

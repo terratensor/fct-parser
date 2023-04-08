@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +43,11 @@ type Comment struct {
 	Count    string `json:"count,omitempty"`
 }
 
+// QuestionList содержит список идентификаторов вопросов
+type QuestionList struct {
+	QuestionID []int `json:"question_id"`
+}
+
 func checkError(message string, err error) {
 	if err != nil {
 		log.Fatal(message, err)
@@ -58,23 +64,24 @@ var jsonFormat,
 	list,
 	current,
 	htmlTags,
-	parseFct,
+	early,
 	updateConfig bool
 
-var outputPath string
+var pageCount, outputPath string
 
 var wg sync.WaitGroup
 
 func main() {
 
 	flag.BoolVarP(&showAll, "all", "a", false, "сохранение всего списка обсуждений событий с начала СВОДД в отдельные файлы")
+	flag.BoolVarP(&early, "early", "e", false, "сохранение предыдущей темы обсуждения")
 	flag.BoolVarP(&list, "list", "l", false, "вывод в консоль списка адресов страниц с обсуждениями событий с начала СВОДД")
 	flag.BoolVarP(&current, "current", "c", false, "вывод в консоль адреса ссылки текущего активного обсуждения событий с начала СВОДД")
 	flag.BoolVarP(&jsonFormat, "json", "j", false, "вывод в формате json (по умолчанию \"csv\")")
 	flag.BoolVarP(&indent, "json-indent", "i", false, "форматированный вывод json с отступами и переносами строк")
 	flag.BoolVarP(&htmlTags, "html-tags", "h", false, "вывод с сохранение с html тегов")
-	flag.BoolVarP(&parseFct, "parse-fct", "p", false, "парсить все вопросы с сайта")
 	flag.BoolVarP(&updateConfig, "update", "u", false, "загрузить конфиг файл")
+	flag.StringVarP(&pageCount, "page-count", "p", "0", "разобрать указанное кол-во страниц с вопросами https://фкт-алтай.рф/qa/question?page=p")
 	flag.StringVarP(&outputPath, "output", "o", "./parsed-files", "путь сохранения файлов")
 
 	flag.Parse()
@@ -120,23 +127,47 @@ func processAllQuestions(conf config.Config) {
 		return
 	}
 
-	// start 2000 / 47874
-	if parseFct {
-		var item config.Item
-		for i := 47649; i < 48100; i++ {
-			item.Id = i
-			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", i)
-			wg.Add(1)
-			go gopherUrl(item)
-			time.Sleep(50 * time.Millisecond)
-			//err := processUrl(item)
-			//if err != nil {
-			//	log.Printf("skipped: %v", err)
-			//	continue
-			//}
-			//log.Printf("Done!")
+	pages, err := strconv.Atoi(pageCount)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	if pages > 0 {
+		// Разбираем указанное кол-во страниц и получаем список ИД вопросов,
+		// опубликованных на странице «Список вопросов» ФКТ
+		list := getQuestionIDsList(pages)
+		if err != nil {
+			log.Printf("skipped: %v", err)
 		}
-		wg.Wait()
+
+		var item config.Item
+
+		for _, dataID := range list.QuestionID {
+
+			item.Id = dataID
+			item.Url = fmt.Sprintf("%v%v", "https://фкт-алтай.рф/qa/question/view-", dataID)
+
+			//wg.Add(1)
+			//go gopherUrl(item)
+			// задержка между запуском горутин нужна для того, чтобы не сервер не выдавал bad gateway
+			//time.Sleep(50 * time.Millisecond)
+
+			err := processUrl(item)
+			if err != nil {
+				log.Printf("skipped: %v", err)
+				continue
+			}
+			log.Printf("Done!")
+		}
+		//wg.Wait()
+		return
+	}
+
+	if early {
+		err := processUrl(conf.PreviousDiscussion())
+		if err != nil {
+			log.Printf("skipped: %v", err)
+		}
 		return
 	}
 
@@ -158,6 +189,10 @@ func processAllQuestions(conf config.Config) {
 	}
 }
 
+// gopherUrl функция многопоточной обработки url
+// экспериментальная функциональность, использовать не рекомендуется,
+// при обработке большого кол-ва адресов, лего получить от сервера bad gateway,
+// если кол-во запросов в секунду превысит допустимый предел сервера
 func gopherUrl(item config.Item) {
 	defer wg.Done()
 	err := processUrl(item)
@@ -168,6 +203,7 @@ func gopherUrl(item config.Item) {
 }
 
 func processUrl(item config.Item) error {
+	defer duration(track("выполнено за"))
 
 	URI, err := url.ParseRequestURI(item.Url)
 	if err != nil {
@@ -204,25 +240,33 @@ func processUrl(item config.Item) error {
 	return nil
 }
 
+// getQuestionIDsList Возвращает заполненную структуру QuestionList идентификаторами вопросов,
+// опубликованных на указанных страницах
+func getQuestionIDsList(pages int) QuestionList {
+
+	ur := "https://фкт-алтай.рф/qa/question"
+
+	list := QuestionList{}
+
+	for page := 1; page <= pages; page++ {
+		parseUrl := fmt.Sprintf("%v?page=%v", ur, page)
+
+		doc, err := getTopicBody(parseUrl)
+		if err != nil {
+			log.Printf("%v\n", err)
+		}
+
+		log.Printf("parse %v\n", parseUrl)
+
+		list.parseQuestionList(doc)
+	}
+
+	return list
+}
+
 func parseViewId(s string) string {
-	defer duration(track("foo"))
-
+	//defer duration(track("выполнено за"))
 	return strings.ReplaceAll(s, "https://фкт-алтай.рф/qa/question/view-", "")
-
-	// nLen := 0
-	// for i := 0; i < len(s); i++ {
-	// 	if b := s[i]; '0' <= b && b <= '9' {
-	// 		nLen++
-	// 	}
-	// }
-	// var n = make([]int, 0, nLen)
-	// for i := 0; i < len(s); i++ {
-	// 	if b := s[i]; '0' <= b && b <= '9' {
-	// 		n = append(n, int(b)-'0')
-	// 	}
-	// }
-	//
-	// return strings.Trim(strings.Replace(fmt.Sprint(n), " ", ",", -1), "[]")
 }
 
 func getTopicBody(url string) (*html.Node, error) {
@@ -332,6 +376,32 @@ func parseLinkedQuestions(n *html.Node, parentID string) []Comment {
 	}
 	f(n)
 	return comments
+}
+
+// parseQuestionList проходит по html.node документа и
+// заполняет структуру QuestionList ИД номерами вопросов
+func (ql *QuestionList) parseQuestionList(n *html.Node) {
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("list-view", n) {
+			// проходим по узлу с атрибутом class block question-item}
+			for cl := n.FirstChild; cl != nil; cl = cl.NextSibling {
+				if cl.Type == html.ElementNode && nodeHasRequiredCssClass("question-item", cl) {
+					qidStr := getRequiredDataAttr("data-key", cl)
+					qid, err := strconv.Atoi(qidStr)
+					if err != nil {
+						log.Printf("error conv ID %v\n", err)
+					}
+					ql.QuestionID = append(ql.QuestionID, qid)
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(n)
 }
 
 func parseCommentList(n *html.Node, topic *Topic, parentID string) {
@@ -590,9 +660,4 @@ func track(msg string) (string, time.Time) {
 
 func duration(msg string, start time.Time) {
 	log.Printf("%v: %v\n", msg, time.Since(start))
-}
-
-func parseQuestionPage() {
-	//url := "https://фкт-алтай.рф/qa/question"
-
 }

@@ -54,8 +54,12 @@ func ReadConfig() Config {
 
 func (c *Config) IsValidConfig() {
 	if len(c.List) == 0 {
-		log.Fatalf("%v", "неправильный формат конфиг файла, исправьте или удалите файл, для загрузки конфиг файла используйте опцию fct-parcer -u")
+		log.Fatalf("%v", "неправильный формат конфиг файла, исправьте или удалите файл, для загрузки конфиг файла используйте опцию fct-parser -u")
 	}
+}
+
+func (c *Config) PreviousDiscussion() Item {
+	return c.List[len(c.List)-2]
 }
 
 func (c *Config) CurrentDiscussion() Item {

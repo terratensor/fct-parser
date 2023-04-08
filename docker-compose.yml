@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  fct-parser:
+    image: ${REGISTRY}/fct-search-parser:${IMAGE_TAG}
+    container_name: fct-parser
+    volumes:
+      - parsed-files:/app/parsed-files
+volumes:
+  parsed-files:

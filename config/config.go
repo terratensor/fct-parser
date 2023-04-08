@@ -58,6 +58,10 @@ func (c *Config) IsValidConfig() {
 	}
 }
 
+func (c *Config) PreviousDiscussion() Item {
+	return c.List[len(c.List)-2]
+}
+
 func (c *Config) CurrentDiscussion() Item {
 	return c.List[len(c.List)-1]
 }

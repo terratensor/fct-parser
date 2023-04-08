@@ -15,6 +15,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w -
 
 FROM scratch
 
+LABEL org.opencontainers.image.source = https://github.com/audetv/fct-parser
+
 WORKDIR /app
 
 COPY --from=build /app/fct-parser /app/fct-parser

@@ -33,14 +33,14 @@ const TypeLinkedQuestion = "2"
 const TypeComment = "3"
 
 type Comment struct {
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	Text     string `json:"text"`
-	Datetime string `json:"datetime"`
-	DataID   string `json:"data_id,omitempty"`
-	ParentID string `json:"parent_id"`
-	Type     string `json:"type"`
-	Count    string `json:"count,omitempty"`
+	Username   string `json:"username"`
+	Role       string `json:"role"`
+	Text       string `json:"text"`
+	Datetime   string `json:"datetime"`
+	DataID     string `json:"data_id,omitempty"`
+	ParentID   string `json:"parent_id"`
+	Type       string `json:"type"`
+	AvatarFile string `json:"avatar_file"`
 }
 
 // QuestionList содержит список идентификаторов вопросов
@@ -450,6 +450,10 @@ func parseComment(n *html.Node, t string, parentID string) Comment {
 			comment.Role = getInnerText(n)
 		}
 
+		if n.Type == html.ElementNode && nodeHasRequiredCssClass("ava-80", n) {
+			comment.AvatarFile = getRequiredDataAttr("src", n)
+		}
+
 		// Находим ноду с типом ElementNode и атрибутом со значением comment-text
 		// Переменной nAnchor присваиваем эту ноду
 		if n.Type == html.ElementNode && nodeHasRequiredCssClass("comment-text", n) {
@@ -574,7 +578,7 @@ func nodeHasRequiredCssClass(rcc string, n *html.Node) bool {
 func writeCSVFile(topic Topic, outputPath string) {
 	// Define header row
 	headerRow := []string{
-		"Username", "Role", "Text", "Datetime", "DataID",
+		"Username", "Role", "Text", "Datetime", "DataID", "AvatarFile",
 	}
 
 	// Data array to write to CSV
@@ -590,6 +594,7 @@ func writeCSVFile(topic Topic, outputPath string) {
 		topic.Question.Text,
 		topic.Question.Datetime,
 		topic.Question.DataID,
+		topic.Question.AvatarFile,
 	})
 
 	// Add linked question to output data
@@ -627,6 +632,7 @@ func addCommentData(data [][]string, comment Comment) [][]string {
 		comment.Text,
 		comment.Datetime,
 		comment.DataID,
+		comment.AvatarFile,
 	})
 }
 

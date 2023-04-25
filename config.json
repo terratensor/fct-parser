@@ -227,9 +227,16 @@
      {
       "id": 20736,
       "num": "33",
-      "date": "",
+      "date": "26.04.23",
       "url": "https://фкт-алтай.рф/qa/question/view-20736",
+      "comments": 847
+    },
+     {
+      "id": 4554,
+      "num": "34",
+      "date": "",
+      "url": "https://фкт-алтай.рф/qa/question/view-4554",
       "comments": 0
-    }   
+    }
   ]
 }

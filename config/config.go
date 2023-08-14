@@ -22,8 +22,9 @@ type Item struct {
 	Url  string `json:"url"`
 }
 
+// configUrl deprecated url "https://raw.githubusercontent.com/audetv/fct-parser/main/config.json"
 var (
-	configUrl  = "https://raw.githubusercontent.com/audetv/fct-parser/main/config.json"
+	configUrl  = "https://svodd.ru/api/list"
 	configFile = "./config.json"
 )
 
